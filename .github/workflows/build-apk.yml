@@ -3,8 +3,14 @@ name: Build APK
 # Builds the installable .apk in the cloud so nothing Android has to live on the
 # MacBook. Run it from the Actions tab (Run workflow) or by pushing to main.
 #
-# Output: an artifact called "rsf-session-logger-apk" on the run's summary page.
-# Download it on the tablet, or download it here and copy it across by USB.
+# Output: an artifact on the run's summary page. Download it on the tablet, or
+# download it here and copy it across by USB.
+#
+# No keystore configured yet? The build still works — it produces a DEBUG apk,
+# which installs and runs exactly like the real thing. That is deliberate, so the
+# very first build can happen before any signing setup. A debug apk cannot be
+# upgraded to a signed one without uninstalling, so use it to prove the app works
+# on the tablet, not to log real sessions.
 
 on:
   push:
@@ -12,7 +18,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Signed release build (needs the keystore secrets)'
+        description: 'Signed release build (falls back to debug if no keystore is configured)'
         type: boolean
         default: true
 
@@ -46,22 +52,38 @@ jobs:
           npx capacitor-assets generate --android --iconBackgroundColor '#12357e' || \
             echo "Icon generation skipped — check resources/icon-1024.png"
 
+      # Decide release vs debug from what actually exists, not from the trigger.
+      # A push has no `inputs`, so the old check treated every push as a release
+      # and hard-failed before the keystore existed -- meaning the first build
+      # could never succeed. Now a missing keystore degrades to debug.
+      - name: Decide build type
+        id: mode
+        env:
+          HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+          WANT_RELEASE: ${{ github.event_name != 'workflow_dispatch' || inputs.release }}
+        run: |
+          if [ "$HAS_KEYSTORE" = "true" ] && [ "$WANT_RELEASE" = "true" ]; then
+            echo "type=release" >> "$GITHUB_OUTPUT"
+            echo "::notice::Building a SIGNED RELEASE apk."
+          else
+            echo "type=debug" >> "$GITHUB_OUTPUT"
+            if [ "$WANT_RELEASE" = "true" ]; then
+              echo "::warning::No signing keystore configured, so this is a DEBUG apk. It installs and runs normally, but it cannot later be upgraded to a signed build without uninstalling (which erases local data). Set up the keystore before logging real sessions -- see DOCUMENTS/KEYSTORE.md."
+            fi
+          fi
+
       # The keystore lives in GitHub Secrets, base64-encoded. It is never in the
       # repo. Losing it means no future build can install over the existing app.
       - name: Restore the signing keystore
-        if: ${{ github.event.inputs.release != 'false' }}
+        if: steps.mode.outputs.type == 'release'
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. See DOCUMENTS/KEYSTORE.md — run the one-time keystore setup before a release build."
-            exit 1
-          fi
           echo "$KEYSTORE_B64" | base64 -d > android/rsf-release.keystore
           echo "Keystore restored ($(wc -c < android/rsf-release.keystore) bytes)"
 
       - name: Build signed release APK
-        if: ${{ github.event.inputs.release != 'false' }}
+        if: steps.mode.outputs.type == 'release'
         env:
           KS_PASSWORD:  ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS:    ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -75,7 +97,7 @@ jobs:
             -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
       - name: Build debug APK
-        if: ${{ github.event.inputs.release == 'false' }}
+        if: steps.mode.outputs.type == 'debug'
         working-directory: android
         run: ./gradlew assembleDebug
 
@@ -84,10 +106,11 @@ jobs:
           mkdir -p out
           find android/app/build/outputs/apk -name '*.apk' -exec cp {} out/ \;
           ls -la out
+          test -n "$(ls -A out)" || { echo "::error::No .apk was produced."; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: rsf-session-logger-apk
+          name: rsf-session-logger-${{ steps.mode.outputs.type }}-apk
           path: out/*.apk
           retention-days: 90
 
