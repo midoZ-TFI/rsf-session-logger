@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="color-scheme" content="light">
+  <title>RSF Session Logger</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- PIN lock overlay (§10.8). Shown on launch when a PIN is set. -->
+<div id="lock" class="lock hidden">
+  <img src="assets/icon-1024.png" alt="" class="lock-mark">
+  <h1 class="lock-title">RSF Session Logger</h1>
+  <p id="lock-msg" class="lock-msg">Enter your 4-digit PIN</p>
+  <div id="lock-dots" class="lock-dots"><i></i><i></i><i></i><i></i></div>
+  <div class="keypad">
+    <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+    <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+    <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+    <button class="keypad-blank" disabled></button>
+    <button data-k="0">0</button>
+    <button data-k="del" class="keypad-del">⌫</button>
+  </div>
+</div>
+
+<div id="shell" class="shell hidden">
+
+  <header class="topbar">
+    <img src="assets/rsf-logo.png" alt="Rochester School of Fitness" class="topbar-logo">
+    <div class="topbar-right">
+      <span id="offline-chip" class="chip chip-warn hidden">Offline</span>
+      <span id="today-chip" class="chip"></span>
+    </div>
+  </header>
+
+  <main id="screens">
+
+    <!-- ══════════ LOG ══════════ -->
+    <section id="screen-log" class="screen">
+      <div class="screen-head">
+        <div>
+          <h2>Log</h2>
+          <p id="log-date-label" class="muted"></p>
+        </div>
+        <div class="daynav">
+          <button id="day-prev" class="btn btn-ghost" aria-label="Previous day">‹</button>
+          <button id="day-today" class="btn btn-ghost">Today</button>
+          <button id="day-next" class="btn btn-ghost" aria-label="Next day">›</button>
+        </div>
+      </div>
+
+      <!-- Running day total (§10.3) -->
+      <div id="day-total" class="daytotal"></div>
+
+      <div id="log-list" class="list"></div>
+
+      <div class="log-actions">
+        <button id="btn-add" class="btn btn-primary btn-xl">+ Add session</button>
+        <button id="btn-repeat" class="btn btn-secondary btn-xl">Repeat last</button>
+      </div>
+    </section>
+
+    <!-- ══════════ CLIENTS ══════════ -->
+    <section id="screen-clients" class="screen hidden">
+      <div class="screen-head">
+        <h2>Clients</h2>
+        <button id="btn-add-client" class="btn btn-primary">+ Add client</button>
+      </div>
+
+      <div class="searchrow">
+        <input id="client-search" type="search" placeholder="Search clients…" autocomplete="off">
+        <label class="toggle">
+          <input id="show-archived" type="checkbox"> <span>Show archived</span>
+        </label>
+      </div>
+
+      <div id="client-list" class="list"></div>
+
+      <div class="screen-foot">
+        <button id="btn-merge" class="btn btn-ghost">Merge duplicate clients…</button>
+      </div>
+    </section>
+
+    <!-- ══════════ REPORT ══════════ -->
+    <section id="screen-report" class="screen hidden">
+      <div class="screen-head"><h2>Report</h2></div>
+
+      <div class="presets">
+        <button class="btn btn-secondary" data-preset="this-month">This month</button>
+        <button class="btn btn-secondary" data-preset="last-month">Last month</button>
+        <button class="btn btn-secondary" data-preset="this-week">This week</button>
+        <button class="btn btn-secondary" data-preset="last-week">Last week</button>
+      </div>
+
+      <div class="daterow">
+        <label>From <input id="rep-from" type="date"></label>
+        <label>To <input id="rep-to" type="date"></label>
+        <button id="btn-build" class="btn btn-primary">Build report</button>
+      </div>
+
+      <div id="report-out" class="report-out"></div>
+
+      <div id="report-send" class="sendrow hidden">
+        <button id="btn-send-endpoint" class="btn btn-primary btn-xl">Email to accounting</button>
+        <button id="btn-send-mailapp" class="btn btn-secondary btn-xl">Send with mail app</button>
+        <button id="btn-save-csv" class="btn btn-ghost">Save CSV to device</button>
+      </div>
+
+      <h3 class="section-title">Send history</h3>
+      <div id="send-history" class="list"></div>
+    </section>
+
+    <!-- ══════════ SETTINGS ══════════ -->
+    <section id="screen-settings" class="screen hidden">
+      <div class="screen-head"><h2>Settings</h2></div>
+
+      <div class="card">
+        <h3>Email delivery</h3>
+        <label class="field">Accounting address
+          <input id="set-to" type="email" inputmode="email" autocomplete="off">
+        </label>
+        <label class="field">Copy to (optional)
+          <input id="set-cc" type="email" inputmode="email" autocomplete="off">
+        </label>
+        <label class="field">Apps Script endpoint URL
+          <input id="set-endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+        </label>
+        <label class="field">Shared secret token
+          <input id="set-token" type="text" autocomplete="off">
+        </label>
+        <button id="btn-test-endpoint" class="btn btn-secondary">Test endpoint</button>
+        <p id="endpoint-status" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h3>Reminders</h3>
+        <label class="toggle">
+          <input id="set-remind" type="checkbox"> <span>Warn me if no report has been sent in 7 days</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <h3>Security</h3>
+        <p id="pin-state" class="muted"></p>
+        <button id="btn-set-pin" class="btn btn-secondary">Set / change PIN</button>
+        <button id="btn-clear-pin" class="btn btn-ghost">Remove PIN</button>
+      </div>
+
+      <div class="card">
+        <h3>Backup</h3>
+        <p class="muted">The tablet is the only copy until a report is emailed. Back up before any app update.</p>
+        <button id="btn-backup" class="btn btn-primary">Back up to file</button>
+        <button id="btn-restore" class="btn btn-secondary">Restore from file…</button>
+        <input id="restore-file" type="file" accept="application/json,.json" class="hidden">
+        <p id="backup-status" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h3>App info</h3>
+        <p class="muted" id="app-info"></p>
+        <button id="btn-diagnostics" class="btn btn-ghost">Show diagnostics</button>
+        <pre id="diagnostics" class="diag hidden"></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab tab-active" data-screen="log"><span>Log</span></button>
+    <button class="tab" data-screen="clients"><span>Clients</span></button>
+    <button class="tab" data-screen="report"><span>Report</span></button>
+    <button class="tab" data-screen="settings"><span>Settings</span></button>
+  </nav>
+
+</div>
+
+<!-- Modal host -->
+<div id="modal" class="modal hidden"><div id="modal-card" class="modal-card"></div></div>
+
+<!-- Toast / undo host -->
+<div id="toast" class="toast hidden"><span id="toast-msg"></span><button id="toast-action" class="hidden"></button></div>
+
+<script src="js/catalogue.js"></script>
+<script src="js/db.js"></script>
+<script src="js/store.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/report.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

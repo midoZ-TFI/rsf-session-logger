@@ -1,0 +1,12 @@
+node_modules/
+android/
+ios/
+out/
+*.apk
+*.aab
+
+# Never commit signing material. The keystore belongs in the password manager
+# and in GitHub Secrets — nowhere else.
+*.keystore
+*.jks
+keystore.properties

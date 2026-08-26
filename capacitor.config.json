@@ -1,0 +1,16 @@
+{
+  "appId": "com.rochesterschooloffitness.sessionlogger",
+  "appName": "RSF Session Logger",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SpeechRecognition": {
+      "language": "en-US"
+    }
+  }
+}
