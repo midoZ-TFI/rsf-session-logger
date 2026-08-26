@@ -246,12 +246,19 @@ const Dictation = (() => {
 
   /* ---------- status ---------- */
 
+  /* Order matters: the 24-hour phrasings must be tested before the bare
+   * "cancelled", or "cancelled 24 hours ahead" would match the generic rule
+   * first. A bare "cancelled" is treated as the non-billable kind, so the app
+   * never bills someone on a guess — the editor is open for correction. */
   const STATUS_PHRASES = [
-    { re: /\bno[ -]?show(?:ed)?\b/,                       code: 'noshow' },
-    { re: /\bcancell?ed? (?:with )?(?:notice|advance)\b/, code: 'cancel_ok' },
-    { re: /\blate cancell?(?:ed|ation)?\b/,               code: 'cancel_late' },
-    { re: /\bcancell?ed? late\b/,                         code: 'cancel_late' },
-    { re: /\bcancell?ed?\b/,                              code: 'cancel_ok' }
+    { re: /\bno[ -]?show(?:ed)?\b/,                                    code: 'noshow' },
+    { re: /\bcancell?ed? (?:it )?(?:in |with )?24 ?(?:hours?|hrs?)(?: (?:ahead|notice|in advance|early))?\b/, code: 'cancel_ok' },
+    { re: /\b24 ?(?:hours?|hrs?)(?: (?:notice|ahead|in advance|early))?\b/, code: 'cancel_ok' },
+    { re: /\bcancell?ed? (?:with |in )?(?:notice|advance|good time)\b/, code: 'cancel_ok' },
+    { re: /\blate cancell?(?:ed|ation)?\b/,                            code: 'cancel_late' },
+    { re: /\bcancell?ed? late\b/,                                      code: 'cancel_late' },
+    { re: /\bcancell?ed? (?:short notice|last minute)\b/,              code: 'cancel_late' },
+    { re: /\bcancell?ed?\b/,                                           code: 'cancel_ok' }
   ];
 
   function extractStatus(s) {

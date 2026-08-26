@@ -38,11 +38,19 @@ const CLASS_BY_CODE = Object.fromEntries(CATALOGUE.map(c => [c.code, c]));
  * Held per attendee, not per session, so one no-show in a group of eight does
  * not mark the whole class as a no-show.
  * `billable` drives the billable-minutes total in the report. */
+/* The billing rule, confirmed by Mido 2026-08-26: a cancellation given 24 hours
+ * or more in advance is not billable. Everything else is — a no-show, and a
+ * cancellation inside 24 hours.
+ *
+ * The labels name the 24-hour line explicitly rather than saying "late" and
+ * "notice". Not for whoever is logging -- that is Mido, who knows the policy --
+ * but for accounting, who read these exact strings in the CSV and need to see
+ * why a line is unbilled. This is the only place billing behaviour is defined. */
 const STATUSES = [
-  { code: 'attended',   label: 'Attended',            billable: true,  short: 'OK'  },
-  { code: 'noshow',     label: 'No-show',             billable: true,  short: 'NS'  },
-  { code: 'cancel_late', label: 'Cancelled (late)',   billable: true,  short: 'CL'  },
-  { code: 'cancel_ok',  label: 'Cancelled (notice)',  billable: false, short: 'CN'  }
+  { code: 'attended',    label: 'Attended',                   billable: true,  short: 'OK'  },
+  { code: 'noshow',      label: 'No-show',                    billable: true,  short: 'NS'  },
+  { code: 'cancel_late', label: 'Cancelled — under 24h',      billable: true,  short: '<24' },
+  { code: 'cancel_ok',   label: 'Cancelled — 24h+ notice',    billable: false, short: '24+' }
 ];
 
 const STATUS_BY_CODE = Object.fromEntries(STATUSES.map(s => [s.code, s]));
