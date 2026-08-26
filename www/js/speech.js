@@ -144,12 +144,19 @@ const Speech = (() => {
    * Speech returns "mike kirby" with no capitals and sometimes a near-miss, so
    * exact match is not enough. Returns ranked candidates; the UI always shows
    * them for confirmation rather than auto-selecting. */
+  /* Below this, a "match" is coincidence rather than evidence. Measured against
+   * the recorded mis-hearings in TESTING/name-matching.test.js: the weakest real
+   * one scores 33, while nonsense tops out around 12. Twenty sits between with
+   * room either side. Anything under it is reported as no match, which sends the
+   * user to typing — the safe direction to fail in. */
+  const MIN_SCORE = 20;
+
   function matchClients(phrase, clients) {
     const said = normalise(phrase);
     if (!said) return [];
     return clients
       .map(c => ({ client: c, score: score(said, normalise(c.name)) }))
-      .filter(x => x.score > 0)
+      .filter(x => x.score >= MIN_SCORE)
       .sort((a, b) => b.score - a.score)
       .slice(0, 6);
   }
@@ -185,31 +192,58 @@ const Speech = (() => {
     if (!saidWords.length) return 0;
 
     let total = 0;
-    saidWords.forEach(w => {
-      let best = 0;
-      nameWords.forEach(n => {
-        if (n === w) { best = Math.max(best, 10); return; }
-        if (n.startsWith(w) || w.startsWith(n)) { best = Math.max(best, 8); return; }
-        const d = editDistance(w, n);
-        const tolerance = Math.max(1, Math.floor(Math.max(w.length, n.length) * 0.34));
-        if (d <= tolerance) { best = Math.max(best, 7 - d); return; }
-        /* Spelling gave up — try how it sounds. Scored just under a close
-         * spelling match, so a real near-spelling still wins a tie. */
-        if (w.length > 2 && n.length > 2 && soundex(w) === soundex(n)) {
-          best = Math.max(best, 5);
-          return;
-        }
-        /* Last resort: partial credit for a shared opening. Without it, a
-         * surname that matches nothing scores zero against everyone, so
-         * "Robert <mangled>" ties every Robert on the roster and the winner is
-         * whoever sorts first. A few shared letters is weak evidence, but it is
-         * evidence, and it breaks the tie towards the right person. */
-        const shared = commonPrefix(w, n);
-        if (shared >= 3) best = Math.max(best, 3);
-      });
-      total += best;
-    });
+    for (let i = 0; i < saidWords.length; i++) {
+      const solo = bestWordScore(saidWords[i], nameWords);
+
+      /* The recogniser sometimes breaks one surname into two words — Calcagno
+       * comes back as "call cagno", and neither half matches anything. Try the
+       * pair glued together, and take it only when it genuinely beats scoring
+       * the two separately. */
+      if (i + 1 < saidWords.length) {
+        const joined = bestWordScore(saidWords[i] + saidWords[i + 1], nameWords);
+        const next = bestWordScore(saidWords[i + 1], nameWords);
+        if (joined > solo + next) { total += joined; i++; continue; }
+      }
+      total += solo;
+    }
     return total * 3;
+  }
+
+  /* How well one spoken word matches any word of a name, best signal first. */
+  function bestWordScore(w, nameWords) {
+    let best = 0;
+    nameWords.forEach(n => {
+      if (n === w) { best = Math.max(best, 10); return; }
+      if (n.startsWith(w) || w.startsWith(n)) { best = Math.max(best, 8); return; }
+
+      const d = editDistance(w, n);
+      const tolerance = Math.max(1, Math.floor(Math.max(w.length, n.length) * 0.34));
+      if (d <= tolerance) { best = Math.max(best, 7 - d); return; }
+
+      if (w.length > 2 && n.length > 2) {
+        const a = soundex(w), b = soundex(n);
+        /* A key that is mostly padding carries almost no information: "Joe" and
+         * "zzzz" both reduce to 2000, and treating that as a match let nonsense
+         * score as highly as a real near-miss. Require at least two coded
+         * sounds before believing the key. */
+        const solid = (k) => k.replace(/0+$/, '').length >= 2;
+        /* Sounds the same all through. */
+        if (a === b && solid(a)) { best = Math.max(best, 5); return; }
+        /* Sounds the same up to the tail. "Monica" for Monkelbaan and "Culcano"
+         * for Calcagno agree on the first three positions and part company after
+         * — enough to nominate, not enough to be sure, so it scores low and the
+         * user still confirms. */
+        if (a.slice(0, 3) === b.slice(0, 3) && solid(a.slice(0, 3))) {
+          best = Math.max(best, 4); return;
+        }
+      }
+
+      /* Last resort: partial credit for a shared opening. Without it, a surname
+       * that matches nothing scores zero against everyone, so "Robert <mangled>"
+       * ties every Robert on the roster and the winner is whoever sorts first. */
+      if (commonPrefix(w, n) >= 3) best = Math.max(best, 3);
+    });
+    return best;
   }
 
   /* Soundex — a phonetic key, so names that SOUND alike compare equal even when
@@ -237,7 +271,12 @@ const Speech = (() => {
       return '';                       // vowels, plus H, W, Y
     };
 
-    let out = s[0];
+    /* Classic Soundex keeps the first letter verbatim, which is its worst flaw
+     * for this job: "Cashtown" and "Kashtan" are the same sound and the same
+     * code from the second letter on, yet compare as C235 vs K235. Same for
+     * Corona/Korona. Coding the first letter like every other makes the key
+     * consistent. Vowel-initial names all fold to A, which is the standard trick. */
+    let out = code(s[0]) || 'A';
     let prev = code(s[0]);
 
     for (let i = 1; i < s.length; i++) {
@@ -278,5 +317,5 @@ const Speech = (() => {
   }
 
   return { available, deviceSupported, isNative, activeLayer, listen, stop,
-           matchClients, normalise, cleanName, soundex, NO_ENGINE };
+           matchClients, normalise, cleanName, soundex, MIN_SCORE, NO_ENGINE };
 })();

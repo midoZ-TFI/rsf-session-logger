@@ -638,7 +638,10 @@ const UI = (() => {
           renderClients();
           return toast(`Heard "${phrase}" — nobody on the roster matches.`, { ms: 6000 });
         }
-        if (ranked.length === 1 || ranked[0].score >= 85) {
+        /* Open a member directly only on a strong match. A lone weak candidate
+         * is still a guess, and opening the wrong person's record unasked is
+         * worse than showing a short list. */
+        if (ranked[0].score >= 70) {
           $('#client-search').value = ranked[0].client.name;
           return renderClients().then(() => openClientEditor(ranked[0].client.id));
         }
