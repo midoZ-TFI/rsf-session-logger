@@ -280,6 +280,7 @@ const Dictation = (() => {
 
     const picked = [];
     const unmatched = [];
+    const ambiguous = [];
     const seen = new Set();
     let loneStatus = null;
 
@@ -311,7 +312,15 @@ const Dictation = (() => {
       const best = ranked[0];
       const runnerUp = ranked[1];
       const clear = !runnerUp || (best.score - runnerUp.score) >= 15;
-      if (!clear) { unmatched.push(chunk); return; }
+      if (!clear) {
+        /* Several people match equally well. That is NOT "nobody recognised" --
+         * saying "Leclair" when three Leclairs are on the roster is a perfectly
+         * clear utterance with an ambiguous answer, and reporting it as a
+         * failure sends the user back to typing a name the app already found.
+         * Hand back the candidates so they can be offered. */
+        ambiguous.push({ phrase: chunk, options: ranked.filter(r => r.score === best.score).map(r => r.client) });
+        return;
+      }
       if (seen.has(best.client.id)) return;
       seen.add(best.client.id);
       picked.push({ client: best.client, status: st.status });
@@ -321,7 +330,7 @@ const Dictation = (() => {
       picked.forEach(p => { if (p.status === 'attended') p.status = loneStatus; });
     }
 
-    return { attendees: picked, clients: picked.map(p => p.client), unmatched, loneStatus };
+    return { attendees: picked, clients: picked.map(p => p.client), unmatched, ambiguous, loneStatus };
   }
 
   /* ---------- the whole thing ---------- */
@@ -339,7 +348,7 @@ const Dictation = (() => {
     const who = extractClients(s, clients);
 
     const missing = [];
-    if (!who.clients.length) missing.push('who');
+    if (!who.clients.length && !who.ambiguous.length) missing.push('who');
     if (!k.classCode) missing.push('class');
     if (!t) missing.push('time');
 
@@ -355,6 +364,7 @@ const Dictation = (() => {
       attendees: who.attendees,
       clients: who.clients,
       unmatched: who.unmatched,
+      ambiguous: who.ambiguous,
       missing,
       assumedDuration: !!k.assumedDuration,
       /* A one-line summary of what was understood, shown above the editor so a

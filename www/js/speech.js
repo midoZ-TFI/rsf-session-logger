@@ -135,9 +135,89 @@ const Speech = (() => {
     });
   }
 
+  /* Listening for a whole sentence, not a word.
+   *
+   * The default path asks Android for one utterance, and Android decides when
+   * you have finished — which it does at the first real pause, cutting people
+   * off mid-sentence. Setting partialResults turns on the platform's dictation
+   * mode, which keeps the microphone open; results then stream in as events
+   * instead of resolving the start() promise.
+   *
+   * So this runs the clock itself: it keeps the newest transcript, stops after a
+   * stretch of quiet, and stops regardless at maxMs so the mic can never be left
+   * open. onPartial lets the UI show the words appearing, which is also the only
+   * honest way to show that it is still listening.
+   */
+  function listenLong({ onPartial, silenceMs = 3500, maxMs = 30000 } = {}) {
+    const p = nativePlugin();
+    if (!p || typeof p.addListener !== 'function') return listen();
+
+    return deviceSupported().then(ok => {
+      if (!ok) throw new Error(NO_ENGINE);
+      return ensurePermission();
+    }).then(ok => {
+      if (!ok) throw new Error('Microphone permission was declined.');
+
+      return new Promise((resolve, reject) => {
+        let best = '';
+        let lastAt = Date.now();
+        let finished = false;
+        const handles = [];
+
+        const cleanup = () => {
+          handles.forEach(h => { try { h && h.remove && h.remove(); } catch (e) {} });
+          clearInterval(tick);
+        };
+        const finish = (err) => {
+          if (finished) return;
+          finished = true;
+          cleanup();
+          try { p.stop(); } catch (e) {}
+          if (err) reject(err);
+          else if (best.trim()) resolve(best.trim());
+          else reject(new Error("Didn't catch that. Try again, or type it instead."));
+        };
+
+        const tick = setInterval(() => {
+          const quiet = Date.now() - lastAt;
+          if (best && quiet > silenceMs) finish();
+          else if (quiet > maxMs) finish();
+        }, 250);
+
+        Promise.resolve(p.addListener('partialResults', (data) => {
+          const m = (data && data.matches) || [];
+          if (!m.length || !m[0]) return;
+          best = m[0];
+          lastAt = Date.now();
+          if (onPartial) onPartial(best);
+        })).then(h => handles.push(h)).catch(() => {});
+
+        Promise.resolve(p.addListener('listeningState', (data) => {
+          if (data && data.status === 'stopped') finish();
+        })).then(h => handles.push(h)).catch(() => {});
+
+        p.start({
+          language: 'en-US',
+          maxResults: 3,
+          partialResults: true,     /* also enables Android dictation mode */
+          popup: false
+        }).catch(err => finish(err));
+
+        /* Exposed so a Stop button can end it deliberately. */
+        listenLong._stopCurrent = () => finish();
+      });
+    });
+  }
+
   function stop() {
     const p = nativePlugin();
     if (p && p.stop) p.stop().catch(() => {});
+  }
+
+  /* Ends a listenLong() in progress, resolving with whatever was heard. */
+  function stopLong() {
+    if (listenLong._stopCurrent) listenLong._stopCurrent();
+    else stop();
   }
 
   /* Match a spoken phrase against the roster.
@@ -316,6 +396,6 @@ const Speech = (() => {
     return prev[n];
   }
 
-  return { available, deviceSupported, isNative, activeLayer, listen, stop,
+  return { available, deviceSupported, isNative, activeLayer, listen, listenLong, stop, stopLong,
            matchClients, normalise, cleanName, soundex, MIN_SCORE, NO_ENGINE };
 })();

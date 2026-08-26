@@ -181,13 +181,34 @@ const UI = (() => {
   /* Dictating a whole session. The parsed result NEVER saves directly — it opens
    * the editor prefilled with a banner saying what was understood, so a misparse
    * costs one correction instead of a wrong line on an invoice. */
+  /* A whole session is a sentence, so this uses the long-listen path: the mic
+   * stays open through pauses, the words appear as they are recognised, and a
+   * second tap ends it. Tapping again while listening stops rather than
+   * restarting -- otherwise the obvious gesture throws away what you just said. */
+  let dictating = false;
+
   function dictateSession() {
     const btn = $('#btn-dictate');
-    const restore = () => { btn.disabled = false; btn.textContent = '🎤 Say a whole session'; };
-    btn.disabled = true;
-    btn.textContent = '🎤 Listening…';
+    const hint = $('.dictate-hint');
+    const hintHTML = hint ? hint.innerHTML : '';
 
-    Speech.listen()
+    if (dictating) { Speech.stopLong(); return; }
+
+    const restore = () => {
+      dictating = false;
+      btn.disabled = false;
+      btn.classList.remove('btn-listening');
+      btn.textContent = '🎤 Say a whole session';
+      if (hint) hint.innerHTML = hintHTML;
+    };
+
+    dictating = true;
+    btn.classList.add('btn-listening');
+    btn.textContent = '● Listening — tap to stop';
+
+    Speech.listenLong({
+      onPartial: (text) => { if (hint) hint.textContent = '“' + text + '”'; }
+    })
       .then(phrase => sessionFromPhrase(phrase, 'Heard'))
       .catch(err => toast(err.message))
       .finally(restore);
@@ -231,7 +252,11 @@ const UI = (() => {
           heard: p.original,
           summary: p.summary,
           missing: p.missing,
-          unmatched: p.unmatched
+          unmatched: p.unmatched,
+          ambiguous: p.ambiguous,
+          /* Seed the picker with the ambiguous word so the list is already
+             narrowed to the people it could be — one tap, not a re-search. */
+          searchSeed: (p.ambiguous && p.ambiguous.length) ? p.ambiguous[0].phrase : ''
         });
         return true;
       });
@@ -261,8 +286,11 @@ const UI = (() => {
         <div class="heard-sum">${esc(dictated.summary)}</div>
         ${(dictated.missing && dictated.missing.length)
           ? `<div class="heard-gap">Couldn't work out: ${esc(dictated.missing.join(', '))} — check below before saving.</div>` : ''}
+        ${(dictated.ambiguous || []).map(a => `
+          <div class="heard-gap">“${esc(a.phrase)}” matches ${a.options.length} members —
+            ${esc(a.options.map(c => c.name).join(', '))}. Pick one below.</div>`).join('')}
         ${(dictated.unmatched && dictated.unmatched.length)
-          ? `<div class="heard-gap">No clear member match for: ${esc(dictated.unmatched.join(', '))}</div>` : ''}
+          ? `<div class="heard-gap">No member matched: ${esc(dictated.unmatched.join(', '))}</div>` : ''}
       </div>` : '';
 
     modal(`
@@ -303,7 +331,8 @@ const UI = (() => {
           <div class="ed-block">
             <label class="ed-label">Who <span id="ed-seats" class="muted"></span></label>
             <div class="searchmic">
-              <input type="search" id="ed-client-search" placeholder="Search members…" autocomplete="off">
+              <input type="search" id="ed-client-search" placeholder="Search members…" autocomplete="off"
+                     value="${esc((dictated && dictated.searchSeed) || '')}">
               <button class="btn btn-mic${speechOk === false ? ' hidden' : ''}" id="ed-mic" type="button">🎤 Say a name</button>
             </div>
             <div id="ed-selected" class="chips"></div>
@@ -320,7 +349,7 @@ const UI = (() => {
         </div>
       </div>`, {
       onOpen(card) {
-        let search = '';
+        let search = (dictated && dictated.searchSeed) || '';
 
         const klass = () => CLASS_BY_CODE[draft.classCode] || CATALOGUE[0];
 
