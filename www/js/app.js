@@ -152,6 +152,7 @@
        which openAddClient would otherwise treat as a name to prefill. */
     $('#btn-add-client').onclick = () => UI.openAddClient();
     $('#btn-merge').onclick = UI.openMerge;
+    $('#client-mic').onclick = UI.voiceFindClient;
     $('#client-search').oninput = UI.renderClients;
     $('#show-archived').onchange = UI.renderClients;
 

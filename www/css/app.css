@@ -104,8 +104,21 @@ main#screens { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: tou
 .btn-ghost     { background: transparent; color: var(--navy); border-color: var(--line); }
 .btn-danger    { background: var(--bad); color: #fff; }
 .btn-xl        { min-height: 60px; font-size: 1.1rem; padding: 12px 26px; }
-.btn-mic       { background: var(--orange); color: #fff; min-height: 40px; padding: 6px 14px;
-                 font-size: .9rem; float: right; }
+/* Voice is a headline feature, so the button is a real tap target, not a chip.
+ * It was 40px and floated, under the 48px minimum used everywhere else and easy
+ * to miss on a tablet held in two hands. */
+.btn-mic { background: var(--orange); color: #fff; border-color: var(--orange-dk);
+           min-height: var(--tap); padding: 10px 18px; white-space: nowrap; }
+.btn-mic:disabled { opacity: .7; }
+
+/* Search field with its microphone alongside. */
+.searchmic { display: flex; gap: 8px; align-items: stretch; flex: 1 1 280px; }
+.searchmic input { flex: 1 1 auto; min-width: 0; }
+.searchmic .btn-mic { flex: 0 0 auto; }
+@media (max-width: 460px) {
+  .searchmic { flex-wrap: wrap; }
+  .searchmic .btn-mic { flex: 1 1 100%; }
+}
 .linkbtn { background: none; border: 0; color: var(--navy); font: inherit;
            text-decoration: underline; cursor: pointer; padding: 4px; }
 

@@ -79,7 +79,12 @@
       </div>
 
       <div class="searchrow">
-        <input id="client-search" type="search" placeholder="Search clients…" autocomplete="off">
+        <div class="searchmic">
+          <input id="client-search" type="search" placeholder="Search members…" autocomplete="off">
+          <!-- Voice was previously reachable only from inside a modal, which made
+               the headline feature of §5 effectively invisible. -->
+          <button id="client-mic" class="btn btn-mic" type="button">🎤 Say a name</button>
+        </div>
         <label class="toggle">
           <input id="show-archived" type="checkbox"> <span>Show archived</span>
         </label>

@@ -210,11 +210,11 @@ const UI = (() => {
             <div class="tg-mins" id="ed-mins"></div>
           </div>
           <div class="ed-block">
-            <label class="ed-label">
-              Who <span id="ed-seats" class="muted"></span>
+            <label class="ed-label">Who <span id="ed-seats" class="muted"></span></label>
+            <div class="searchmic">
+              <input type="search" id="ed-client-search" placeholder="Search members…" autocomplete="off">
               <button class="btn btn-mic" id="ed-mic" type="button">🎤 Say a name</button>
-            </label>
-            <input type="search" id="ed-client-search" placeholder="Search clients…" autocomplete="off">
+            </div>
             <div id="ed-selected" class="chips"></div>
             <div id="ed-clients" class="picklist"></div>
           </div>
@@ -527,6 +527,41 @@ const UI = (() => {
     });
   }
 
+  /* Voice search on the Clients screen. Speaking a name filters the roster; if
+   * exactly one member matches well it opens them directly, which is the whole
+   * point of speaking rather than typing. Never creates anything. */
+  function voiceFindClient() {
+    const btn = $('#client-mic');
+    const restore = () => { btn.disabled = false; btn.textContent = '🎤 Say a name'; };
+    btn.disabled = true;
+    btn.textContent = '🎤 Listening…';
+
+    Speech.listen()
+      .then(phrase => Store.allClients().then(clients => {
+        const pool = $('#show-archived').checked ? clients : clients.filter(c => !c.archived);
+        const ranked = Speech.matchClients(phrase, pool);
+
+        if (!ranked.length) {
+          $('#client-search').value = phrase;
+          renderClients();
+          return toast(`Heard "${phrase}" — nobody on the roster matches.`, { ms: 6000 });
+        }
+        if (ranked.length === 1 || ranked[0].score >= 85) {
+          $('#client-search').value = ranked[0].client.name;
+          return renderClients().then(() => openClientEditor(ranked[0].client.id));
+        }
+        showVoiceMatches(phrase, ranked,
+          (clientId) => {
+            const hit = pool.find(c => c.id === clientId);
+            $('#client-search').value = hit ? hit.name : '';
+            renderClients().then(() => openClientEditor(clientId));
+          },
+          () => openAddClient(phrase));
+      }))
+      .catch(err => toast(err.message))
+      .finally(restore);
+  }
+
   function openClientEditor(id) {
     DB.get('clients', id).then(c => {
       if (!c) return;
@@ -766,6 +801,7 @@ const UI = (() => {
     $, $$, esc, toast, hideToast, modal, closeModal, confirmDialog, showScreen,
     renderLog, renderClients, renderReportScreen, renderSettings, renderSendHistory,
     openSessionEditor, openAddClient, openMerge, buildReport, showDiagnostics,
+    voiceFindClient, voiceAvailable: () => Speech.available(),
     getLogDate: () => logDate,
     setLogDate: (d) => { logDate = d; },
     getReport: () => currentReport
