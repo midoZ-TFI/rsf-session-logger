@@ -111,10 +111,22 @@
 
       <div id="report-out" class="report-out"></div>
 
+      <!-- Sending is one primary action with two fallbacks, so it is laid out
+           that way: the real send gets its own full-width row, the fallbacks sit
+           smaller beneath it. Previously all three were equal-width siblings,
+           which made the wrong one look just as correct as the right one. -->
       <div id="report-send" class="sendrow hidden">
-        <button id="btn-send-endpoint" class="btn btn-primary btn-xl">Email to accounting</button>
-        <button id="btn-send-mailapp" class="btn btn-secondary btn-xl">Send with mail app</button>
-        <button id="btn-save-csv" class="btn btn-ghost">Save CSV to device</button>
+        <button id="btn-send-endpoint" class="btn btn-primary btn-send-main">
+          Email to accounting
+        </button>
+        <div class="sendrow-alt">
+          <button id="btn-send-mailapp" class="btn btn-secondary">Send with mail app</button>
+          <button id="btn-save-csv" class="btn btn-ghost">Save CSV to device</button>
+        </div>
+        <p class="sendrow-note">
+          The button above sends it and records that it went. The two below are
+          fallbacks — neither can confirm the report actually reached accounting.
+        </p>
       </div>
 
       <h3 class="section-title">Send history</h3>
