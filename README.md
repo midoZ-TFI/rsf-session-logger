@@ -19,6 +19,7 @@ distinction matters.
 |---|---|
 | `www/index.html` | All four screens, plus the lock and modal hosts |
 | `www/css/app.css` | Everything visual. Brand orange `#ee6b12` is the page ground, cards stay white, navy `#12357e` is the accent |
+| `www/js/native.js` | Resolves native Capacitor plugins without a bundler — read the note at the top before touching voice or backup |
 | `www/js/catalogue.js` | The 15 class types and the 4 attendance statuses |
 | `www/js/db.js` | IndexedDB wrapper — open, get, put, export, import |
 | `www/js/store.js` | Clients, sessions, settings, the date rules, the seed roster |

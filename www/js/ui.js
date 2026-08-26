@@ -748,8 +748,9 @@ const UI = (() => {
     Promise.all([Store.allClients(), Store.allSessions(), Store.allSends()])
       .then(([c, s, snd]) => {
         el.textContent = [
-          `Platform      : ${window.Capacitor ? 'Capacitor (native)' : 'browser'}`,
+          `Platform      : ${Native.isNative() ? 'Capacitor (native)' : 'browser'}`,
           `Voice layer   : ${Speech.activeLayer()}`,
+          `File plugin   : ${Native.plugin('Filesystem') ? 'resolved via ' + Native.how('Filesystem') : 'NOT RESOLVED'}`,
           `Clients       : ${c.length} (${c.filter(x => x.archived).length} archived)`,
           `Sessions      : ${s.length}`,
           `Send records  : ${snd.length}`,

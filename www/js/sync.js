@@ -106,10 +106,12 @@ const Sync = (() => {
 
   /* ---------- file writes (backup, CSV export) ---------- */
 
-  function capFilesystem() {
-    const cap = window.Capacitor;
-    return (cap && cap.Plugins && cap.Plugins.Filesystem) || null;
-  }
+  /* Same resolution problem as the speech plugin — see native.js. Reading
+   * Capacitor.Plugins.Filesystem directly returns undefined on the tablet, and
+   * the app would quietly fall back to a browser download that goes nowhere
+   * findable in a WebView. Backup is the only recovery path if the tablet is
+   * lost, so this must not fail quietly. */
+  const capFilesystem = () => Native.plugin('Filesystem');
 
   /* On Android writes into Documents so the file is reachable from the Files app.
    * In a desktop browser falls back to a normal download. */
@@ -124,6 +126,13 @@ const Sync = (() => {
         recursive: true
       }).then(res => ({ where: res.uri || 'Documents/' + filename }));
     }
+    if (Native.isNative()) {
+      /* On the tablet with no Filesystem plugin the browser download below is
+       * useless — refuse rather than report a save that did not happen. */
+      return Promise.reject(new Error(
+        'The file plugin did not load, so nothing was written. Check Settings → Diagnostics.'));
+    }
+
     const blob = new Blob([text], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

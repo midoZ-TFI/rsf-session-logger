@@ -11,11 +11,10 @@
  */
 const Speech = (() => {
 
-  function nativePlugin() {
-    const cap = window.Capacitor;
-    if (!cap || !cap.Plugins) return null;
-    return cap.Plugins.SpeechRecognition || null;
-  }
+  /* Resolved through Native.plugin, not Capacitor.Plugins directly — see the
+   * long note at the top of native.js for why reading Plugins directly returns
+   * undefined on the tablet. */
+  const nativePlugin = () => Native.plugin('SpeechRecognition');
 
   const isNative = () => !!nativePlugin();
 
@@ -30,7 +29,12 @@ const Speech = (() => {
   /* Which layer will actually be used — surfaced in Settings → diagnostics so a
    * "voice isn't working" report can be answered without guessing. */
   function activeLayer() {
-    if (isNative()) return 'native (Android SpeechRecognizer)';
+    if (isNative()) return `native (Android SpeechRecognizer, via ${Native.how('SpeechRecognition')})`;
+    /* On a real device the native plugin should always resolve. If it has not,
+     * say so loudly rather than reporting the browser fallback as normal — that
+     * fallback does not work in an Android WebView, which is the whole reason
+     * the native plugin is there. */
+    if (Native.isNative()) return `BROKEN — native plugin did not resolve (${Native.how('SpeechRecognition')})`;
     if (browserImpl()) return 'browser SpeechRecognition (testing only)';
     return 'none — use the keyboard microphone key';
   }
