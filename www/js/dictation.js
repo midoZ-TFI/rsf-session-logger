@@ -165,10 +165,21 @@ const Dictation = (() => {
     { p: 'athletes class',         fixed: 'ATH60' },
     { p: 'athletes',               fixed: 'ATH60' },
     { p: 'athlete',                fixed: 'ATH60' },
+    /* The recogniser renders "two on one" every which way — as words, as digits,
+     * with hyphens, and run together as "211" or "2 1" once the little words are
+     * swallowed. Miss it and the digits fall through into the name, which is how
+     * "Charlie Paganelli two on one" became a member called
+     * "Charlie Paganelli 211". */
     { p: '2 on 1',                 base: 'TWO' },
     { p: 'two on one',             base: 'TWO' },
     { p: 'two on 1',               base: 'TWO' },
     { p: '2 on one',               base: 'TWO' },
+    { p: 'to on one',              base: 'TWO' },
+    { p: '2 1',                    base: 'TWO' },
+    { p: '211',                    base: 'TWO' },
+    { p: '2on1',                   base: 'TWO' },
+    { p: 'twoonone',               base: 'TWO' },
+    { p: 'two one',                base: 'TWO' },
     { p: 'group class',            base: 'GRP' },
     { p: 'group',                  base: 'GRP' },
     { p: 'individual class',       base: 'IND' },
@@ -274,7 +285,13 @@ const Dictation = (() => {
 
     rawChunks.forEach(raw => {
       const st = extractStatus(raw);
-      const chunk = st.rest.split(/\s+/).filter(w => w && !FILLER.has(w)).join(' ').trim();
+      /* Strip stray numbers as well as filler. Nobody on the roster has a digit
+       * in their name, so anything numeric left over is debris from a class or
+       * duration phrase the matchers did not fully consume — and letting it
+       * through creates members like "Charlie Paganelli 211". */
+      const chunk = st.rest.split(/\s+/)
+        .filter(w => w && !FILLER.has(w) && !/^\d+$/.test(w) && wordNumber(w) === null)
+        .join(' ').trim();
 
       if (!chunk) {
         if (st.status !== 'attended') loneStatus = st.status;

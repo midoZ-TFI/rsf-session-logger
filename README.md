@@ -34,11 +34,12 @@ distinction matters.
 ## Tests
 
 ```bash
-node "../TESTING/dictation.test.js"
+node "../TESTING/dictation.test.js"      # 51 assertions — spoken/typed session parsing
+node "../TESTING/name-matching.test.js"  # 22 real mis-hearings from the tablet
 ```
 
-44 assertions over the spoken-session parser. No browser, no dependencies — run
-it after any change to the phrasing rules.
+No browser, no dependencies. Run both after any change to the phrasing rules or
+the name matcher.
 
 ## Build the .apk
 

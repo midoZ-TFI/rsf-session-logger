@@ -158,6 +158,18 @@ const Speech = (() => {
     return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  /* A spoken name with the numeric debris removed. The recogniser turns "two on
+   * one" into digits, and if that reaches the roster you get a member called
+   * "Charlie Paganelli 211". Used before searching or offering to add a name. */
+  function cleanName(phrase) {
+    return String(phrase || '')
+      .split(/\s+/)
+      .filter(w => w && !/^[0-9]+$/.test(w))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   /* Scores word by word rather than on the whole string. Speech mangles one name
    * part at a time — "mike kerby" for Mike Kirby — so a whole-string comparison
    * ranks every other Mike equally and the right answer gets buried. Each spoken
@@ -180,11 +192,70 @@ const Speech = (() => {
         if (n.startsWith(w) || w.startsWith(n)) { best = Math.max(best, 8); return; }
         const d = editDistance(w, n);
         const tolerance = Math.max(1, Math.floor(Math.max(w.length, n.length) * 0.34));
-        if (d <= tolerance) best = Math.max(best, 7 - d);
+        if (d <= tolerance) { best = Math.max(best, 7 - d); return; }
+        /* Spelling gave up — try how it sounds. Scored just under a close
+         * spelling match, so a real near-spelling still wins a tie. */
+        if (w.length > 2 && n.length > 2 && soundex(w) === soundex(n)) {
+          best = Math.max(best, 5);
+          return;
+        }
+        /* Last resort: partial credit for a shared opening. Without it, a
+         * surname that matches nothing scores zero against everyone, so
+         * "Robert <mangled>" ties every Robert on the roster and the winner is
+         * whoever sorts first. A few shared letters is weak evidence, but it is
+         * evidence, and it breaks the tie towards the right person. */
+        const shared = commonPrefix(w, n);
+        if (shared >= 3) best = Math.max(best, 3);
       });
       total += best;
     });
     return total * 3;
+  }
+
+  /* Soundex — a phonetic key, so names that SOUND alike compare equal even when
+   * they are spelled nothing like each other.
+   *
+   * This exists because edit distance is the wrong tool for misheard names. The
+   * recogniser returns "Guerrin" for Geherin: three substitutions apart on paper,
+   * far outside any sane spelling tolerance, yet identical out loud. Both reduce
+   * to G650. Same for Kirby/Kerby and Fiete/Feet.
+   *
+   * Its known weakness is the first letter, which is kept as-is — Korona and
+   * Corona do not match phonetically. Edit distance still catches those, which
+   * is why both run rather than one replacing the other. */
+  function soundex(word) {
+    const s = String(word).toUpperCase().replace(/[^A-Z]/g, '');
+    if (!s) return '';
+
+    const code = (c) => {
+      if ('BFPV'.indexOf(c) >= 0) return '1';
+      if ('CGJKQSXZ'.indexOf(c) >= 0) return '2';
+      if ('DT'.indexOf(c) >= 0) return '3';
+      if (c === 'L') return '4';
+      if ('MN'.indexOf(c) >= 0) return '5';
+      if (c === 'R') return '6';
+      return '';                       // vowels, plus H, W, Y
+    };
+
+    let out = s[0];
+    let prev = code(s[0]);
+
+    for (let i = 1; i < s.length; i++) {
+      const c = s[i];
+      const d = code(c);
+      if (d && d !== prev) out += d;
+      /* H and W are transparent: they do not separate two same-coded letters.
+       * A vowel does, which is why prev is cleared for everything else. */
+      if (c === 'H' || c === 'W') continue;
+      prev = d;
+    }
+    return (out + '000').slice(0, 4);
+  }
+
+  function commonPrefix(a, b) {
+    let i = 0;
+    while (i < a.length && i < b.length && a[i] === b[i]) i++;
+    return i;
   }
 
   function editDistance(a, b) {
@@ -207,5 +278,5 @@ const Speech = (() => {
   }
 
   return { available, deviceSupported, isNative, activeLayer, listen, stop,
-           matchClients, normalise, NO_ENGINE };
+           matchClients, normalise, cleanName, soundex, NO_ENGINE };
 })();

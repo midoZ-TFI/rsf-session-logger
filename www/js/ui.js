@@ -628,7 +628,8 @@ const UI = (() => {
     btn.textContent = '🎤 Listening…';
 
     Speech.listen()
-      .then(phrase => Store.allClients().then(clients => {
+      .then(raw => Store.allClients().then(clients => {
+        const phrase = Speech.cleanName(raw);
         const pool = $('#show-archived').checked ? clients : clients.filter(c => !c.archived);
         const ranked = Speech.matchClients(phrase, pool);
 
@@ -709,7 +710,9 @@ const UI = (() => {
         $('[data-act="cancel"]', card).onclick = closeModal;
         $('[data-act="mic"]', card).onclick = () => {
           Speech.listen()
-            .then(p => { $('#nc-name', card).value = p; toast(`Heard "${p}" — check the spelling before saving.`); })
+            .then(p => { const n = Speech.cleanName(p);
+                         $('#nc-name', card).value = n;
+                         toast(`Heard "${n}" — check the spelling before saving.`); })
             .catch(e => toast(e.message));
         };
         $('[data-act="save"]', card).onclick = () => {
