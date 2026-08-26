@@ -15,6 +15,7 @@ const UI = (() => {
 
   /* Working date for the Log screen. Defaults to the device's local today. */
   let logDate = Store.localDate();
+  let speechOk = null;
   let currentReport = null;
   let undoTimer = null;
 
@@ -133,6 +134,24 @@ const UI = (() => {
           r.onclick = () => openSessionEditor(r.dataset.id);
         });
       });
+  }
+
+  /* When the device has no speech recogniser, hide the voice controls instead of
+   * leaving buttons that can only ever produce an error, and say why once. */
+  function applySpeechAvailability(ok) {
+    speechOk = ok;
+    ['#btn-dictate', '#client-mic'].forEach(sel => {
+      const el = $(sel);
+      if (el) el.classList.toggle('hidden', !ok);
+    });
+    const hint = $('.dictate-hint');
+    if (hint) {
+      if (ok) { hint.classList.remove('hidden'); return; }
+      hint.classList.remove('hidden');
+      hint.innerHTML = 'Voice input is unavailable — this tablet has no speech ' +
+        'recogniser installed. Everything can still be typed. ' +
+        'See <b>Settings → Show diagnostics</b>.';
+    }
   }
 
   /* ---------- session editor ---------- */
@@ -267,7 +286,7 @@ const UI = (() => {
             <label class="ed-label">Who <span id="ed-seats" class="muted"></span></label>
             <div class="searchmic">
               <input type="search" id="ed-client-search" placeholder="Search members…" autocomplete="off">
-              <button class="btn btn-mic" id="ed-mic" type="button">🎤 Say a name</button>
+              <button class="btn btn-mic${speechOk === false ? ' hidden' : ''}" id="ed-mic" type="button">🎤 Say a name</button>
             </div>
             <div id="ed-selected" class="chips"></div>
             <div id="ed-clients" class="picklist"></div>
@@ -834,12 +853,14 @@ const UI = (() => {
     const el = $('#diagnostics');
     el.classList.toggle('hidden');
     if (el.classList.contains('hidden')) return;
-    Promise.all([Store.allClients(), Store.allSessions(), Store.allSends()])
-      .then(([c, s, snd]) => {
+    Promise.all([Store.allClients(), Store.allSessions(), Store.allSends(), Speech.deviceSupported()])
+      .then(([c, s, snd, ok]) => {
+        speechOk = ok;
         el.textContent = [
           `Platform      : ${Native.isNative() ? 'Capacitor (native)' : 'browser'}`,
           `Voice layer   : ${Speech.activeLayer()}`,
           `File plugin   : ${Native.plugin('Filesystem') ? 'resolved via ' + Native.how('Filesystem') : 'NOT RESOLVED'}`,
+          `Speech engine : ${speechOk === null ? 'checking…' : speechOk ? 'present' : 'NONE INSTALLED ON THIS DEVICE'}`,
           `Clients       : ${c.length} (${c.filter(x => x.archived).length} archived)`,
           `Sessions      : ${s.length}`,
           `Send records  : ${snd.length}`,
@@ -856,6 +877,7 @@ const UI = (() => {
     renderLog, renderClients, renderReportScreen, renderSettings, renderSendHistory,
     openSessionEditor, openAddClient, openMerge, buildReport, showDiagnostics,
     voiceFindClient, dictateSession, voiceAvailable: () => Speech.available(),
+    applySpeechAvailability,
     getLogDate: () => logDate,
     setLogDate: (d) => { logDate = d; },
     getReport: () => currentReport

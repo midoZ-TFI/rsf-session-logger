@@ -294,6 +294,9 @@
         wire();
         showScreen('log');
         checkSendReminder();
+        /* Ask the device whether it can recognise speech at all, and shape the
+           UI around the answer rather than advertising a dead button. */
+        Speech.deviceSupported().then(UI.applySpeechAvailability);
       })
       .catch(err => {
         document.body.innerHTML =

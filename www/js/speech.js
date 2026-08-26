@@ -26,6 +26,40 @@ const Speech = (() => {
     return isNative() || !!browserImpl();
   }
 
+  /* Whether the DEVICE can actually recognise speech, which is a different
+   * question from whether the plugin loaded.
+   *
+   * Android only offers speech recognition when some app provides a
+   * RecognitionService — normally Google's. Budget tablets often ship without
+   * it, and then the plugin loads perfectly and `start()` fails with a bare
+   * NOT_AVAILABLE. Asking up front turns that into a sentence a person can act
+   * on, and lets the UI stop advertising a button that cannot work.
+   *
+   * Cached after the first successful answer; the answer only changes if the
+   * user installs a speech service, which means restarting the app anyway. */
+  let deviceOk = null;
+
+  function deviceSupported() {
+    if (deviceOk !== null) return Promise.resolve(deviceOk);
+
+    const p = nativePlugin();
+    if (!p) {
+      deviceOk = !!browserImpl();
+      return Promise.resolve(deviceOk);
+    }
+    if (typeof p.available !== 'function') {
+      deviceOk = true;                       // older plugin: assume yes, fail later
+      return Promise.resolve(deviceOk);
+    }
+    return p.available()
+      .then(res => { deviceOk = !!(res && res.available); return deviceOk; })
+      .catch(() => { deviceOk = false; return deviceOk; });
+  }
+
+  const NO_ENGINE =
+    'This tablet has no speech recogniser installed, so voice input cannot work. ' +
+    'Everything can still be typed. See Settings → Diagnostics.';
+
   /* Which layer will actually be used — surfaced in Settings → diagnostics so a
    * "voice isn't working" report can be answered without guessing. */
   function activeLayer() {
@@ -54,7 +88,10 @@ const Speech = (() => {
   function listen() {
     const p = nativePlugin();
     if (p) {
-      return ensurePermission().then(ok => {
+      return deviceSupported().then(ok => {
+        if (!ok) throw new Error(NO_ENGINE);
+        return ensurePermission();
+      }).then(ok => {
         if (!ok) throw new Error('Microphone permission was declined. You can still use the keyboard microphone key.');
         return p.start({
           language: 'en-US',
@@ -169,5 +206,6 @@ const Speech = (() => {
     return prev[n];
   }
 
-  return { available, isNative, activeLayer, listen, stop, matchClients, normalise };
+  return { available, deviceSupported, isNative, activeLayer, listen, stop,
+           matchClients, normalise, NO_ENGINE };
 })();
