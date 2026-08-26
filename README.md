@@ -18,7 +18,7 @@ distinction matters.
 | File | What it does |
 |---|---|
 | `www/index.html` | All four screens, plus the lock and modal hosts |
-| `www/css/app.css` | Everything visual. Brand navy `#12357e`, orange `#ee6b12` |
+| `www/css/app.css` | Everything visual. Brand orange `#ee6b12` is the page ground, cards stay white, navy `#12357e` is the accent |
 | `www/js/catalogue.js` | The 15 class types and the 4 attendance statuses |
 | `www/js/db.js` | IndexedDB wrapper — open, get, put, export, import |
 | `www/js/store.js` | Clients, sessions, settings, the date rules, the seed roster |

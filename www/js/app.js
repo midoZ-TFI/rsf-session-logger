@@ -148,7 +148,9 @@
     };
 
     /* Clients */
-    $('#btn-add-client').onclick = UI.openAddClient;
+    /* Wrapped, not passed directly — onclick hands the handler a click Event,
+       which openAddClient would otherwise treat as a name to prefill. */
+    $('#btn-add-client').onclick = () => UI.openAddClient();
     $('#btn-merge').onclick = UI.openMerge;
     $('#client-search').oninput = UI.renderClients;
     $('#show-archived').onchange = UI.renderClients;

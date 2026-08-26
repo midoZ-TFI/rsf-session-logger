@@ -11,7 +11,10 @@
   --ink:       #16202e;
   --muted:     #5d6b80;
   --line:      #d8dfea;
-  --bg:        #f4f6fa;
+  --bg:        #ee6b12;   /* brand orange — the page ground */
+  --on-bg:     #ffffff;   /* anything sitting directly on the orange */
+  --on-bg-dim: #ffe4cd;
+  --sunken:    #f1f3f8;   /* inset panels inside white cards */
   --card:      #ffffff;
   --ok:        #1a7f4b;
   --bad:       #b3261e;
@@ -61,10 +64,29 @@ main#screens { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: tou
   display: flex; align-items: flex-end; justify-content: space-between;
   gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
 }
-.screen-head h2 { margin: 0; font-size: 1.6rem; color: var(--navy); }
+.screen-head h2 { margin: 0; font-size: 1.6rem; color: var(--on-bg); }
 .screen-head p { margin: 2px 0 0; }
 .screen-foot { margin-top: 20px; }
-.section-title { color: var(--navy); font-size: 1.05rem; margin: 22px 0 8px; }
+.section-title { color: var(--on-bg); font-size: 1.05rem; margin: 22px 0 8px; }
+
+/* Text and outline controls that sit straight on the orange. Navy on orange is
+ * unreadable, so anything at that level flips to white. Inside a white card the
+ * normal navy/muted palette still applies. */
+.screen > .screen-head p.muted,
+.screen > .searchrow .toggle,
+.screen > .daterow label { color: var(--on-bg-dim); }
+.screen > .report-out .detail summary,
+.screen > .report-out .section-title { color: var(--on-bg); }
+
+/* Outline buttons at page level need a light outline; the navy default
+ * disappears against the orange. Ghost buttons inside a white card are
+ * untouched and keep the navy. */
+.screen > .screen-head .btn-ghost,
+.screen > .screen-foot .btn-ghost,
+.screen > .log-actions .btn-ghost,
+.screen > .sendrow .btn-ghost {
+  color: var(--on-bg); border-color: rgba(255,255,255,.6); background: rgba(255,255,255,.14);
+}
 
 /* ---------- buttons ---------- */
 
@@ -283,7 +305,7 @@ textarea { min-height: 70px; resize: vertical; }
 .picklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
             gap: 8px; max-height: 300px; overflow-y: auto; padding: 4px;
             border: 1px solid var(--line); border-radius: var(--radius);
-            background: var(--bg); margin-top: 10px; }
+            background: var(--sunken); margin-top: 10px; }
 .pick { font: inherit; cursor: pointer; text-align: left;
         border: 1px solid var(--line); background: var(--card);
         border-radius: 10px; padding: 10px 12px; min-height: var(--tap); }

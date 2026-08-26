@@ -65,8 +65,17 @@
     <!-- ══════════ CLIENTS ══════════ -->
     <section id="screen-clients" class="screen hidden">
       <div class="screen-head">
-        <h2>Clients</h2>
-        <button id="btn-add-client" class="btn btn-primary">+ Add client</button>
+        <div>
+          <h2>Clients</h2>
+          <p id="client-count" class="muted"></p>
+        </div>
+      </div>
+
+      <!-- Adding a member is the second most common thing done on this screen,
+           after looking one up, so it gets a full-width button rather than a
+           small one tucked into the corner. -->
+      <div class="log-actions">
+        <button id="btn-add-client" class="btn btn-primary btn-xl">+ Add new member</button>
       </div>
 
       <div class="searchrow">

@@ -492,12 +492,24 @@ const UI = (() => {
     const showArchived = $('#show-archived').checked;
 
     return Store.allClients().then(clients => {
+      const active = clients.filter(c => !c.archived).length;
+      $('#client-count').textContent =
+        `${active} active member${active === 1 ? '' : 's'}` +
+        (clients.length - active ? ` · ${clients.length - active} archived` : '');
+
       const list = clients
         .filter(c => showArchived ? true : !c.archived)
         .filter(c => !q || Speech.normalise(c.name).includes(q));
 
       if (!list.length) {
-        $('#client-list').innerHTML = `<p class="empty">No clients match.</p>`;
+        /* A search with no hits is the moment someone realises the member is not
+         * on the roster yet, so offer the add right there with the name filled in. */
+        $('#client-list').innerHTML = q
+          ? `<p class="empty">No member matches that.<br>
+               <button class="linkbtn" id="cl-quickadd">Add "${esc($('#client-search').value.trim())}" as a new member</button></p>`
+          : `<p class="empty">No members yet. Use <b>+ Add new member</b> above.</p>`;
+        const qa = $('#cl-quickadd');
+        if (qa) qa.onclick = () => openAddClient($('#client-search').value.trim());
         return;
       }
 
@@ -538,9 +550,9 @@ const UI = (() => {
           $('[data-act="cancel"]', card).onclick = closeModal;
           $('[data-act="save"]', card).onclick = () => {
             const name = $('#cl-name', card).value.trim();
-            if (!name) return toast('A client needs a name.');
+            if (!name) return toast('A member needs a name.');
             Store.updateClient(id, { name, notes: $('#cl-notes', card).value.trim() })
-              .then(() => { closeModal(); renderClients(); toast('Client saved.'); });
+              .then(() => { closeModal(); renderClients(); toast('Member saved.'); });
           };
           const arch = $('[data-act="archive"]', card);
           if (arch) arch.onclick = () => Store.archiveClient(id)
@@ -553,11 +565,11 @@ const UI = (() => {
     });
   }
 
-  function openAddClient() {
+  function openAddClient(prefillName = '') {
     modal(`
-      <h3>Add client</h3>
+      <h3>Add new member</h3>
       <label class="field">Name
-        <input id="nc-name" type="text" autocomplete="off">
+        <input id="nc-name" type="text" autocomplete="off" value="${esc(prefillName)}">
       </label>
       <label class="field">Notes (optional)
         <textarea id="nc-notes" rows="3"></textarea>
@@ -576,12 +588,12 @@ const UI = (() => {
         };
         $('[data-act="save"]', card).onclick = () => {
           const name = $('#nc-name', card).value.trim();
-          if (!name) return toast('A client needs a name.');
+          if (!name) return toast('A member needs a name.');
           Store.allClients().then(existing => {
             const clash = existing.find(c => Speech.normalise(c.name) === Speech.normalise(name));
             if (clash) return toast(`${clash.name} is already on the roster.`);
             Store.addClient(name, $('#nc-notes', card).value.trim())
-              .then(() => { closeModal(); renderClients(); toast('Client added.'); });
+              .then(() => { closeModal(); renderClients(); toast('Member added.'); });
           });
         };
       }
