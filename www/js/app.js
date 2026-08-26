@@ -122,6 +122,8 @@
     $('#day-next').onclick = () => { UI.setLogDate(Store.addDays(UI.getLogDate(), 1)); UI.renderLog(); };
     $('#day-today').onclick = () => { UI.setLogDate(Store.localDate()); UI.renderLog(); };
 
+    $('#btn-dictate').onclick = UI.dictateSession;
+
     /* Repeat last (§10.2) */
     $('#btn-repeat').onclick = () => {
       Store.lastSessionBefore(UI.getLogDate()).then(last => {

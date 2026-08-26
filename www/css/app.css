@@ -111,6 +111,19 @@ main#screens { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: tou
            min-height: var(--tap); padding: 10px 18px; white-space: nowrap; }
 .btn-mic:disabled { opacity: .7; }
 
+/* Dictate a whole session — full width under the Log actions. */
+.btn-dictate { width: 100%; margin-top: 12px; min-height: 60px; font-size: 1.05rem; }
+.dictate-hint { margin: 8px 2px 0; font-size: .82rem; color: var(--on-bg-dim); line-height: 1.5; }
+.dictate-hint i { font-style: italic; }
+
+/* "This is what I heard" banner at the top of a dictated session. */
+.heardbox { background: #fff6ef; border: 1px solid #f6c9a4;
+            border-left: 4px solid var(--orange);
+            border-radius: var(--radius); padding: 12px 14px; margin-bottom: 18px; }
+.heard-line { font-size: .88rem; color: var(--muted); }
+.heard-sum  { font-weight: 700; color: var(--navy); margin-top: 4px; }
+.heard-gap  { margin-top: 6px; font-size: .85rem; color: var(--orange-dk); font-weight: 600; }
+
 /* Search field with its microphone alongside. */
 .searchmic { display: flex; gap: 8px; align-items: stretch; flex: 1 1 280px; }
 .searchmic input { flex: 1 1 auto; min-width: 0; }

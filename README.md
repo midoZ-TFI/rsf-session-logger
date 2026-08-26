@@ -23,12 +23,22 @@ distinction matters.
 | `www/js/catalogue.js` | The 15 class types and the 4 attendance statuses |
 | `www/js/db.js` | IndexedDB wrapper — open, get, put, export, import |
 | `www/js/store.js` | Clients, sessions, settings, the date rules, the seed roster |
+| `www/js/dictation.js` | Turns a spoken sentence into a session — class, time, people, statuses |
 | `www/js/speech.js` | Three-layer voice input and fuzzy name matching |
 | `www/js/report.js` | Report building, CSV, plain text, date presets |
 | `www/js/sync.js` | Apps Script POST, mail-app fallback, backup and restore |
 | `www/js/ui.js` | Screens, the session editor, the time grid, modals |
 | `www/js/app.js` | Startup, PIN lock, event wiring |
 | `apps-script/Code.gs` | The Google Apps Script — paste into script.google.com |
+
+## Tests
+
+```bash
+node "../TESTING/dictation.test.js"
+```
+
+44 assertions over the spoken-session parser. No browser, no dependencies — run
+it after any change to the phrasing rules.
 
 ## Build the .apk
 

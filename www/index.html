@@ -60,6 +60,16 @@
         <button id="btn-add" class="btn btn-primary btn-xl">+ Add session</button>
         <button id="btn-repeat" class="btn btn-secondary btn-xl">Repeat last</button>
       </div>
+
+      <!-- Dictate a whole session. Always opens the editor prefilled rather than
+           saving, so a misparse costs a correction and never a wrong invoice line. -->
+      <button id="btn-dictate" class="btn btn-mic btn-dictate" type="button">
+        🎤 Say a whole session
+      </button>
+      <p class="dictate-hint">
+        Try: <i>“Betsi Geherin individual class at nine thirty”</i> — or
+        <i>“group class Rich Duff and Steve Cole at eight, Mike Kirby no show”</i>
+      </p>
     </section>
 
     <!-- ══════════ CLIENTS ══════════ -->
@@ -213,6 +223,7 @@
 <script src="js/db.js"></script>
 <script src="js/store.js"></script>
 <script src="js/speech.js"></script>
+<script src="js/dictation.js"></script>
 <script src="js/report.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/ui.js"></script>

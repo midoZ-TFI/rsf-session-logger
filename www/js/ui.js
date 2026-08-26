@@ -159,6 +159,47 @@ const UI = (() => {
     });
   }
 
+  /* Dictating a whole session. The parsed result NEVER saves directly — it opens
+   * the editor prefilled with a banner saying what was understood, so a misparse
+   * costs one correction instead of a wrong line on an invoice. */
+  function dictateSession() {
+    const btn = $('#btn-dictate');
+    const restore = () => { btn.disabled = false; btn.textContent = '🎤 Say a whole session'; };
+    btn.disabled = true;
+    btn.textContent = '🎤 Listening…';
+
+    Speech.listen()
+      .then(phrase => Store.activeClients().then(clients => {
+        const p = Dictation.parse(phrase, clients);
+
+        if (!p.clients.length && !p.classCode && !p.startTime) {
+          return toast(`Heard "${phrase}" — couldn't make a session out of that.`, { ms: 7000 });
+        }
+
+        const draft = {
+          date: logDate,
+          startTime: p.startTime || defaultTime(),
+          classCode: p.classCode || 'IND60',
+          customMinutes: p.customMinutes || 60,
+          attendees: p.attendees.map(a => ({ clientId: a.client.id, status: a.status })),
+          notes: ''
+        };
+
+        const klass = CLASS_BY_CODE[draft.classCode];
+        const lim = klass && klass.seats !== 'many' ? klass.seats : Infinity;
+        if (draft.attendees.length > lim) draft.attendees = draft.attendees.slice(0, lim);
+
+        renderSessionEditor(draft, clients, false, {
+          heard: p.original,
+          summary: p.summary,
+          missing: p.missing,
+          unmatched: p.unmatched
+        });
+      }))
+      .catch(err => toast(err.message))
+      .finally(restore);
+  }
+
   function dedupeById(list) {
     const seen = new Set();
     return list.filter(c => (seen.has(c.id) ? false : (seen.add(c.id), true)))
@@ -174,14 +215,27 @@ const UI = (() => {
     return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
   }
 
-  function renderSessionEditor(draft, clients, isEdit) {
+  function renderSessionEditor(draft, clients, isEdit, dictated) {
+    /* When the session came from dictation, show what was heard and what could
+     * not be worked out, so the gaps are obvious before saving. */
+    const banner = dictated ? `
+      <div class="heardbox">
+        <div class="heard-line">Heard: “${esc(dictated.heard)}”</div>
+        <div class="heard-sum">${esc(dictated.summary)}</div>
+        ${(dictated.missing && dictated.missing.length)
+          ? `<div class="heard-gap">Couldn't work out: ${esc(dictated.missing.join(', '))} — check below before saving.</div>` : ''}
+        ${(dictated.unmatched && dictated.unmatched.length)
+          ? `<div class="heard-gap">No clear member match for: ${esc(dictated.unmatched.join(', '))}</div>` : ''}
+      </div>` : '';
+
     modal(`
       <div class="editor">
         <div class="editor-head">
-          <h3>${isEdit ? 'Edit session' : 'Add session'}</h3>
+          <h3>${isEdit ? 'Edit session' : dictated ? 'Check this session' : 'Add session'}</h3>
           <button class="btn btn-ghost" data-act="close">Close</button>
         </div>
         <div class="editor-body">
+          ${banner}
           <div class="ed-block">
             <label class="ed-label">Date</label>
             <input type="date" id="ed-date" value="${esc(draft.date)}">
@@ -801,7 +855,7 @@ const UI = (() => {
     $, $$, esc, toast, hideToast, modal, closeModal, confirmDialog, showScreen,
     renderLog, renderClients, renderReportScreen, renderSettings, renderSendHistory,
     openSessionEditor, openAddClient, openMerge, buildReport, showDiagnostics,
-    voiceFindClient, voiceAvailable: () => Speech.available(),
+    voiceFindClient, dictateSession, voiceAvailable: () => Speech.available(),
     getLogDate: () => logDate,
     setLogDate: (d) => { logDate = d; },
     getReport: () => currentReport
