@@ -123,6 +123,8 @@
     $('#day-today').onclick = () => { UI.setLogDate(Store.localDate()); UI.renderLog(); };
 
     $('#btn-dictate').onclick = UI.dictateSession;
+    $('#btn-type-session').onclick = UI.typeSession;
+    $('#type-session').onkeydown = (e) => { if (e.key === 'Enter') UI.typeSession(); };
 
     /* Repeat last (§10.2) */
     $('#btn-repeat').onclick = () => {

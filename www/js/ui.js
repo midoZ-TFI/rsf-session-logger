@@ -149,8 +149,8 @@ const UI = (() => {
       if (ok) { hint.classList.remove('hidden'); return; }
       hint.classList.remove('hidden');
       hint.innerHTML = 'Voice input is unavailable — this tablet has no speech ' +
-        'recogniser installed. Everything can still be typed. ' +
-        'See <b>Settings → Show diagnostics</b>.';
+        'recogniser installed. Type the session in the box above instead, or use ' +
+        '<b>+ Add session</b>. See <b>Settings → Show diagnostics</b>.';
     }
   }
 
@@ -188,11 +188,29 @@ const UI = (() => {
     btn.textContent = '🎤 Listening…';
 
     Speech.listen()
-      .then(phrase => Store.activeClients().then(clients => {
+      .then(phrase => sessionFromPhrase(phrase, 'Heard'))
+      .catch(err => toast(err.message))
+      .finally(restore);
+  }
+
+  /* Same parser, typed instead of spoken. */
+  function typeSession() {
+    const input = $('#type-session');
+    const phrase = input.value.trim();
+    if (!phrase) return toast('Type a session first, e.g. "Rich Duff individual at ten".');
+    sessionFromPhrase(phrase, 'Read')
+      .then(ok => { if (ok) input.value = ''; })
+      .catch(err => toast(err.message));
+  }
+
+  /* Shared by both. Resolves true when the editor opened. */
+  function sessionFromPhrase(phrase, verb) {
+    return Store.activeClients().then(clients => {
         const p = Dictation.parse(phrase, clients);
 
         if (!p.clients.length && !p.classCode && !p.startTime) {
-          return toast(`Heard "${phrase}" — couldn't make a session out of that.`, { ms: 7000 });
+          toast(`${verb} "${phrase}" — couldn't make a session out of that.`, { ms: 7000 });
+          return false;
         }
 
         const draft = {
@@ -209,14 +227,14 @@ const UI = (() => {
         if (draft.attendees.length > lim) draft.attendees = draft.attendees.slice(0, lim);
 
         renderSessionEditor(draft, clients, false, {
+          verb: verb,
           heard: p.original,
           summary: p.summary,
           missing: p.missing,
           unmatched: p.unmatched
         });
-      }))
-      .catch(err => toast(err.message))
-      .finally(restore);
+        return true;
+      });
   }
 
   function dedupeById(list) {
@@ -239,7 +257,7 @@ const UI = (() => {
      * not be worked out, so the gaps are obvious before saving. */
     const banner = dictated ? `
       <div class="heardbox">
-        <div class="heard-line">Heard: “${esc(dictated.heard)}”</div>
+        <div class="heard-line">${esc(dictated.verb || 'Heard')}: “${esc(dictated.heard)}”</div>
         <div class="heard-sum">${esc(dictated.summary)}</div>
         ${(dictated.missing && dictated.missing.length)
           ? `<div class="heard-gap">Couldn't work out: ${esc(dictated.missing.join(', '))} — check below before saving.</div>` : ''}
@@ -876,7 +894,7 @@ const UI = (() => {
     $, $$, esc, toast, hideToast, modal, closeModal, confirmDialog, showScreen,
     renderLog, renderClients, renderReportScreen, renderSettings, renderSendHistory,
     openSessionEditor, openAddClient, openMerge, buildReport, showDiagnostics,
-    voiceFindClient, dictateSession, voiceAvailable: () => Speech.available(),
+    voiceFindClient, dictateSession, typeSession, voiceAvailable: () => Speech.available(),
     applySpeechAvailability,
     getLogDate: () => logDate,
     setLogDate: (d) => { logDate = d; },

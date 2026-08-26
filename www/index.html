@@ -66,6 +66,15 @@
       <button id="btn-dictate" class="btn btn-mic btn-dictate" type="button">
         🎤 Say a whole session
       </button>
+      <!-- The same sentence parser, driven from the keyboard. Useful when the
+           room is loud, when a name gets misheard, and essential on a tablet
+           with no speech recogniser at all. -->
+      <div class="searchmic typerow">
+        <input id="type-session" type="text" autocomplete="off"
+               placeholder="…or type a session: Betsi Geherin individual at nine thirty">
+        <button id="btn-type-session" class="btn btn-secondary" type="button">Read it</button>
+      </div>
+
       <p class="dictate-hint">
         Try: <i>“Betsi Geherin individual class at nine thirty”</i> — or
         <i>“group class Rich Duff and Steve Cole at eight, Mike Kirby no show”</i>

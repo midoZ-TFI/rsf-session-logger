@@ -116,6 +116,10 @@ main#screens { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: tou
 .dictate-hint { margin: 8px 2px 0; font-size: .82rem; color: var(--on-bg-dim); line-height: 1.5; }
 .dictate-hint i { font-style: italic; }
 
+.typerow { margin-top: 10px; }
+.typerow input { background: var(--card); }
+.typerow .btn { white-space: nowrap; flex: 0 0 auto; }
+
 /* "This is what I heard" banner at the top of a dictated session. */
 .heardbox { background: #fff6ef; border: 1px solid #f6c9a4;
             border-left: 4px solid var(--orange);
